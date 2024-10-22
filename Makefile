@@ -1,5 +1,5 @@
 target/wasm32-wasi/release/http-wasm-header-plugin.wasm: ./src/*.rs
-	cargo build --target wasm32-wasi --release
+	cargo build --target wasm32-wasip1 --release
 
 plugin.wasm: target/wasm32-wasi/release/http-wasm-header-plugin.wasm
 	cp ./target/wasm32-wasi/release/http-wasm-header-plugin.wasm ./plugin.wasm
