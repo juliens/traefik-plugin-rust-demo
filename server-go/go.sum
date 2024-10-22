@@ -1,0 +1,4 @@
+github.com/http-wasm/http-wasm-host-go v0.7.0 h1:+1KrRyOO6tWiDB24QrtSYyDmzFLBBs3jioKaUT0mq1c=
+github.com/http-wasm/http-wasm-host-go v0.7.0/go.mod h1:adXKcLmL7yuavH/e0kBAp7b3TgAHTo/enCduyN5bXGM=
+github.com/tetratelabs/wazero v1.8.0 h1:iEKu0d4c2Pd+QSRieYbnQC9yiFlMS9D+Jr0LsRmcF4g=
+github.com/tetratelabs/wazero v1.8.0/go.mod h1:yAI0XTsMBhREkM/YDAK/zNou3GoiAce1P6+rp/wQhjs=
