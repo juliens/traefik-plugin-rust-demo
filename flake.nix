@@ -32,8 +32,8 @@
       # Development environment output
       devShells = forAllSystems ({ pkgs }: 
       let
-        rustNightly = pkgs.rust-bin.nightly."2024-03-20".default.override {
-          targets = [ "wasm32-wasi" ];
+        rustNightly = pkgs.rust-bin.nightly."2024-10-22".default.override {
+          targets = [ "wasm32-wasip1" ];
           extensions = [ "rust-src" "rust-std" "cargo" "rustc" ];
         };
       in
@@ -53,8 +53,8 @@
   #RUST_BACKTRACE = 1;
   packages = (with pkgs; [
     rustNightly
-    wasm-pack
-    wasmtime
+    #wasm-pack
+    #wasmtime
 
 
     # Dépendances de build essentielles

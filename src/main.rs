@@ -1,21 +1,16 @@
 use std::str;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use serde_json::Result;
 use lazy_static::lazy_static;
-// use anyhow::Result;
-// use reqwest_wasi::Client;
+use http_req::request;
 
 mod guest;
 
-// #![feature(repr128)]
-//
-// // Exemple de structure pour les données JSON
-// #[derive(Debug, Serialize, Deserialize)]
-// struct ApiResponse {
-//     status: String,
-//     data: Option<serde_json::Value>,
-// }
+#[derive(Debug, Serialize, Deserialize)]
+struct ApiResponse {
+    status: String,
+    data: Option<serde_json::Value>,
+}
 
 lazy_static! {
     static ref CONFIG: Config = match serde_json::from_str(str::from_utf8(&guest::get_conf()).unwrap()) {
@@ -33,59 +28,49 @@ fn main() {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Config {
-   headers: HashMap<String, String>,
+    headers: HashMap<String, String>,
 }
 
-#[export_name="handle_request"]
+#[derive(Debug, Serialize, Deserialize)]
+struct WorldTime {
+    currentDateTime: String,
+}
+
+#[export_name = "handle_request"]
 pub fn http_request() -> u64 {
-
-      // Créer un client HTTP
-//             let client = Client::new();
-
-
     let conf: &Config = &*CONFIG;
 
+    let mut writer = Vec::new(); //container for body of a response
+    // let res = request::get("http://worldtimeapi.org/api/timezone/europe/paris", &mut writer);
+         let res = request::get("http://worldclockapi.com/api/json/est/now", &mut writer);
+    let response = match res {
+        Ok(response) => { response        }
+        Err(e) => {
+            guest::send_log(guest::ERROR, &e.to_string());
+            guest::set_code(503);
+            guest::writebody(guest::RESPONSE_BODY, &e.to_string());
+            return 0u64
+        }
+    };
 
-//
-//         // Exemple d'appel à une API externe
-//         match call_external_api(&client).await {
-//             Ok(api_response) => {
-//                 // Ajouter les données de l'API comme header
-//                 if let Some(status) = api_response.status.as_str() {
-//                     guest::add_header(guest::REQUEST_HEADER, "X-API-Status", status);
-//                 }
-//
-//                 // Si on a des données, les ajouter au body
-//                 if let Some(data) = api_response.data {
-//                     if let Ok(json_string) = serde_json::to_string(&data) {
-//                         req.set_body(Some(HttpBody::new(json_string.into_bytes())));
-//                     }
-//                 }
-//             }
-//             Err(e) => {
-//                 guest::send_log(guest::ERROR, &e.to_string();
-//             }
-//         }
+    let resp: WorldTime = match serde_json::from_str(format!("{}", String::from_utf8_lossy(&writer)).as_str()) {
+        Result::Ok(val) => { val }
+        Result::Err(e) => {
+            guest::send_log(guest::ERROR, &e.to_string());
+            guest::set_code(503);
+            guest::writebody(guest::RESPONSE_BODY, &e.to_string());
+            return 0u64
+        }
+    };
+
+    guest::add_header(guest::REQUEST_HEADER, "X-Time", &resp.currentDateTime);
+
 
     for (k, v) in &conf.headers {
         guest::add_header(guest::REQUEST_HEADER, &k, &v);
     }
-    guest::send_log(guest::DEBUG, format!("{:?}", guest::get_addr()).as_str());
-    return 1 as u64;
+    return 1u64;
 }
 
-#[export_name="handle_response"]
-fn http_response(_req_ctx: i32, _is_error: i32) {
-}
-
-// async fn call_external_api(client: &Client) -> Result<ApiResponse> {
-//     // Exemple d'appel à une API JSON
-//     let response = client
-//         .get("http://worldtimeapi.org/api/timezone/europe/paris")
-//         .send()
-//         .await?
-//         .json::<ApiResponse>()
-//         .await?;
-//
-//     Ok(response)
-// }
+#[export_name = "handle_response"]
+fn http_response(_req_ctx: i32, _is_error: i32) {}
