@@ -72,7 +72,7 @@ pub fn writebody(kind: u32, message: &str) {
     unsafe { write_body(kind, message.as_ptr(), message.len() as u32)};
 }
 
-pub fn log_enabl(level: i32) -> i32 {
+pub fn log_enable(level: i32) -> i32 {
     unsafe {
         match log_enabled(level) {
             res => return res
