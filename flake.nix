@@ -1,80 +1,121 @@
 {
-  description = "Rust development environment";
+  description = "Demo plugin with rustt";
 
-  # Flake inputs
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    rust-overlay.url = "https://github.com/oxalica/rust-overlay/archive/master.tar.gz";
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.*.tar.gz";
+    fenix = {
+      url = "https://flakehub.com/f/nix-community/fenix/0.1.*.tar.gz";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    naersk = {
+      url = "https://flakehub.com/f/nix-community/naersk/0.1.*.tar.gz";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    flake-compat.url = "https://flakehub.com/f/edolstra/flake-compat/*.tar.gz";
+    flake-schemas.url = "https://flakehub.com/f/DeterminateSystems/flake-schemas/*.tar.gz";
   };
 
-  # Flake outputs
-  outputs = { self, nixpkgs, rust-overlay}:
-  let
-      # Systems supported
-      allSystems = [
-        "x86_64-linux" # 64-bit Intel/AMD Linux
-        "aarch64-linux" # 64-bit ARM Linux
-        "x86_64-darwin" # 64-bit Intel macOS
-        "aarch64-darwin" # 64-bit ARM macOS
-      ];
+  outputs = { self, ... }@inputs:
+    let
+      pkgName = (self.lib.fromToml ./Cargo.toml).package.name;
+      supportedSystems = [ "aarch64-darwin" "aarch64-linux" "x86_64-darwin" "x86_64-linux" ];
+      forAllSystems = f: inputs.nixpkgs.lib.genAttrs supportedSystems (system: f {
+        pkgs = import inputs.nixpkgs { inherit system; overlays = [ self.overlays.default ]; };
+        inherit system;
+      });
+      rustWasmTarget = "wasm32-wasip1";
+    in
+    {
+      overlays.default = final: prev: rec {
+        system = final.stdenv.hostPlatform.system;
 
-      # Helper to provide system-specific attributes
-      forAllSystems = f: nixpkgs.lib.genAttrs allSystems (system: f {
-        pkgs = import nixpkgs { inherit system;
-        overlays = [ (import rust-overlay) ];
+        # Builds a Rust toolchain from rust-toolchain.toml
+        rustToolchain = with inputs.fenix.packages.${system};
+          combine [
+            latest.rustc
+            latest.cargo
+            targets.${rustWasmTarget}.latest.rust-std
+          ];
+
+        buildRustWasiWasm = self.lib.buildRustWasiWasm final;
+        buildTraefikPlugin = self.lib.buildTraefikPlugin final;
       };
+
+      # Development environments
+      devShells = forAllSystems ({ pkgs, system }: {
+        default =
+          let
+            helpers = with pkgs; [ direnv jq ];
+          in
+          pkgs.mkShell {
+            packages = helpers ++ (with pkgs; [
+              rustToolchain # cargo, etc.
+              cargo-edit # cargo add, cargo rm, etc.
+            ]);
+          };
       });
 
-
-
-  in
-  {
-      # Development environment output
-      devShells = forAllSystems ({ pkgs }: 
-      let
-        rustNightly = pkgs.rust-bin.nightly."2024-10-22".default.override {
-          targets = [ "wasm32-wasip1" ];
-          extensions = [ "rust-src" "rust-std" "cargo" "rustc" ];
+      packages = forAllSystems ({ pkgs, system }: rec {
+        "${pkgName}" = pkgs.buildRustWasiWasm {
+          name = pkgName;
+          src = self;
         };
-      in
-      {
-        default = pkgs.mkShell {
-          shellHook = ''
-          '';
 
-  # Pour la compilation C
-  #CFLAGS = "-I${pkgs.glibc.dev}/include";
-  #LDFLAGS = "-L${pkgs.glibc}/lib";
+        default = self.packages.${system}.${pkgName};
 
-  # Pour rust-bindgen
-  #LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+        "${pkgName}-plugin" = pkgs.stdenv.mkDerivation {
+              name = "${pkgName}-plugin";
+              src = self;
 
-  # Debug
-  #RUST_BACKTRACE = 1;
-  packages = (with pkgs; [
-    rustNightly
-    #wasm-pack
-    #wasmtime
-
-
-    # Dépendances de build essentielles
-#   clang
-#   llvm
-#   gcc
-#   binutils
-
-#   # Outils de développement
-#   pkg-config
-#   openssl.dev
-
-#   # Bibliothèques système nécessaires
-#   glibc.dev
-
-#   # Pour la cross-compilation
-#   lld_13
-#   cmake
-  ]) ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs; [ libiconv ]);
-};
+              buildInputs = [ pkgs.zip ];
+               buildPhase = ''
+                            mkdir -p $out/{lib,bin}
+                            cp ${default}/lib/http-wasm-header.wasm $out/lib/http-wasm-header.wasm
+                            cp $src/.traefik.yaml $out/lib/.traefik.yaml
+                            zip -j $out/bin/plugin.zip $out/lib/http-wasm-header.wasm $out/lib/.traefik.yaml
+                         '';
+          };
       });
+
+      lib = {
+        # Helper function for reading TOML files
+        fromToml = file: builtins.fromTOML (builtins.readFile file);
+
+        handleArgs =
+          { name ? null
+          , src ? self
+          , cargoToml ? ./Cargo.toml
+          }:
+          let
+            meta = (self.lib.fromToml ./Cargo.toml).package;
+            pkgName = if name == null then meta.name else name;
+            pkgSrc = builtins.path { path = src; name = "${pkgName}-source"; };
+          in
+          {
+            inherit (meta) name;
+            inherit pkgName;
+            src = pkgSrc;
+            inherit cargoToml;
+          };
+
+        buildRustWasiWasm = pkgs: { name, src }:
+          let
+            naerskLib = pkgs.callPackage inputs.naersk {
+              cargo = pkgs.rustToolchain;
+              rustc = pkgs.rustToolchain;
+            };
+          in
+          naerskLib.buildPackage {
+            inherit name src;
+            CARGO_BUILD_TARGET = rustWasmTarget;
+            buildInputs = with pkgs; [ wabt ];
+            postInstall = ''
+              mkdir -p $out/lib
+              wasm-strip $out/bin/${name}.wasm -o $out/lib/${name}.wasm
+              rm -rf $out/bin
+              wasm-validate $out/lib/${name}.wasm
+            '';
+          };
+      };
     };
-  }
+}
