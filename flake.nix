@@ -65,7 +65,7 @@
 
         "${pkgName}-plugin" = pkgs.stdenv.mkDerivation {
               name = "${pkgName}-plugin";
-              src = self;
+              src = ./.;
 
               buildInputs = [ pkgs.zip ];
                buildPhase = ''
