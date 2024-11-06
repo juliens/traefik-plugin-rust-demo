@@ -13,7 +13,6 @@ jobs:
       GO_VERSION: 1.22
 
     steps:
-      # https://github.com/marketplace/actions/checkout
       - name: Check out code
         uses: actions/checkout@v4
         with:
@@ -22,9 +21,8 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v17
         with:
-          # Mostly to avoid GitHub rate limiting
-        extra_nix_config: |
-          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+      extra_nix_config: |
+        access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
 
       - name: Upload ZIP artifact
