@@ -12,3 +12,5 @@ require (
 	github.com/tetratelabs/wazero v1.8.0
 	golang.org/x/sys v0.8.0 // indirect
 )
+
+replace github.com/http-wasm/http-wasm-host-go => /Users/juliensalleyron/dev/plugins-sandbox/http-wasm-host-go

@@ -42,7 +42,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "http-wasm-header-plugin"
+name = "http-wasm-header"
 version = "0.1.0"
 dependencies = [
  "http_req_wasi",

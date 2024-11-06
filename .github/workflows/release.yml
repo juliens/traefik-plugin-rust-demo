@@ -7,22 +7,19 @@ on:
 
 jobs:
   main:
-    name: Release process
     runs-on: ubuntu-latest
-    env:
-      GO_VERSION: 1.22
-
     steps:
       - name: Check out code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+
       - name: Install Nix
         uses: cachix/install-nix-action@v17
         with:
-      extra_nix_config: |
-        access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+#      extra_nix_config: |
+#        access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
 
       - name: Upload ZIP artifact
