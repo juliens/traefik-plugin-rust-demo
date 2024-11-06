@@ -71,7 +71,7 @@
                buildPhase = ''
                             mkdir -p $out/{lib,bin}
                             cp ${default}/lib/http-wasm-header.wasm $out/lib/http-wasm-header.wasm
-                            cp $src/.traefik.yaml $out/lib/.traefik.yaml
+                            cp $src/.traefik.yml $out/lib/.traefik.yml
                             zip -j $out/bin/plugin.zip $out/lib/http-wasm-header.wasm $out/lib/.traefik.yaml
                          '';
           };
