@@ -18,6 +18,7 @@
   outputs = { self, ... }@inputs:
     let
       pkgName = (self.lib.fromToml ./Cargo.toml).package.name;
+      pluginName = "${pkgName}-plugin";
       supportedSystems = [ "aarch64-darwin" "aarch64-linux" "x86_64-darwin" "x86_64-linux" ];
       forAllSystems = f: inputs.nixpkgs.lib.genAttrs supportedSystems (system: f {
         pkgs = import inputs.nixpkgs { inherit system; overlays = [ self.overlays.default ]; };
@@ -61,18 +62,19 @@
           src = self;
         };
 
-        default = self.packages.${system}.${pkgName};
 
-        "${pkgName}-plugin" = pkgs.stdenv.mkDerivation {
-              name = "${pkgName}-plugin";
+        default = self.packages.${system}.${pkgName};
+        plugin = self.packages.${system}.${pluginName};
+        "${pluginName}" = pkgs.stdenv.mkDerivation {
+              name = "${pluginName}";
               src = ./.;
 
               buildInputs = [ pkgs.zip ];
                buildPhase = ''
                             mkdir -p $out/{lib,bin}
-                            cp ${default}/lib/http-wasm-header.wasm $out/lib/http-wasm-header.wasm
+                            cp ${default}/lib/http-wasm-header.wasm $out/lib/plugin.wasm
                             cp $src/.traefik.yml $out/lib/.traefik.yml
-                            zip -j $out/bin/plugin.zip $out/lib/http-wasm-header.wasm $out/lib/.traefik.yaml
+                            zip -j $out/bin/plugin.zip $out/lib/plugin.wasm $out/lib/.traefik.yaml
                          '';
           };
       });
