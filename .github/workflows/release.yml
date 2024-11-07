@@ -24,8 +24,7 @@ jobs:
       - name: build
         run: nix build .#http-wasm-header-plugin
 
-      - name: Upload ZIP artifact
-        uses: actions/upload-artifact@v4
+      - name: Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: my-zip-artifact
-          path: result/bin/plugin.zip
+          files: result/bin/plugin.zip
