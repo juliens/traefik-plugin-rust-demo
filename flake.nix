@@ -74,7 +74,7 @@
                             mkdir -p $out/{lib,bin}
                             cp ${default}/lib/http-wasm-header.wasm $out/lib/plugin.wasm
                             cp $src/.traefik.yml $out/lib/.traefik.yml
-                            zip -j $out/bin/plugin.zip $out/lib/plugin.wasm $out/lib/.traefik.yaml
+                            zip -j $out/bin/plugin.zip $out/lib/plugin.wasm $out/lib/.traefik.yml
                          '';
           };
       });
